@@ -10,7 +10,6 @@ By default, GPTCache uses **Least Recently Used (LRU)** eviction, treating a 5-t
 
 * **Baseline:** GPTCache with default **LRU (admit-all)** policy.
 * **Extension:** **TinyLFU admission** (admit on ≥2nd sighting) to block one-shot inserts.
-* **Future Work:** **Cost-Aware LRU (CA-LRU)** combining recency with estimated token cost, tuned online (bandit).
 * **Perf Suite:** Benchmarks on realistic traces + synthetic hot/cold mixes with reproducible scripts.
 
 ---
