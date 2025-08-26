@@ -1,8 +1,17 @@
+# Python
 __pycache__/
 *.pyc
 .venv/
 .env
+
+# Results and caches
 results/
 *.db
 *.index
 *.npy
+*.npz
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
