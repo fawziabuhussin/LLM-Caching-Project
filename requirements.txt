@@ -1,0 +1,6 @@
+gptcache==0.1.43
+faiss-cpu==1.7.4
+pandas==2.2.2
+matplotlib==3.8.4
+tiktoken==0.7.0
+numpy==1.26.4
