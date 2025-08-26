@@ -14,33 +14,61 @@ By default, GPTCache uses **Least Recently Used (LRU)** eviction, treating a 5-t
 
 ---
 
-## ⚡ Quickstart (pip-only, minimal)
+## ⚡ Quickstart (pip + reproducible benchmarks)
 
-> Works on Windows/macOS/Linux. Uses your provided traces in `data/`.
+> Works on Windows/macOS/Linux. Uses traces in `data/`.
 
-```powershell
-# from repo root (PowerShell)
-pip install -U pip gptcache faiss-cpu sqlalchemy numpy pandas matplotlib tqdm
+### 0) Install
+```bash
+python3 -m venv .venv
+source .venv/bin/activate         # Windows: .venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+````
 
-# Run baseline → TinyLFU → plots on the provided trace
-python3 bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode baseline
-python3 bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
+### 1) Run benchmarks
+
+Run baseline and TinyLFU at 200MB (\~102,400 items):
+
+```bash
+py bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode baseline
+
+py bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
 ```
 
-Optional: run the second trace as well:
+### 2) Generate plots
 
-```powershell
-python bench_gptcache.py --trace data\freq_resilient_50k.jsonl --dim 512 --capacity 25600 --base-lat 0.0005 --per-token 0.0002 --mode baseline
-python bench_gptcache.py --trace data\freq_resilient_50k.jsonl --dim 512 --capacity 25600 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
-python plot_results.py
+```bash
+python3 plot_results.py
 ```
 
 **Outputs:**
 
-* Summaries: `results/gptcache_<mode>_cap<capacity>/summary.txt`
+* Summaries: `results/gptcache_<mode>_cap102400/summary.txt`
 * CSV + plots: `results/benchmark_summary.csv`, `results/plots/*.png`
 
-> Tip: If you ever change `--dim`, delete any old `*.db` / `*.index` files to avoid FAISS dimension mismatch.
+### 3) Clean (optional)
+
+```bash
+rm -rf results/ *.db *.index
+```
+
+> Tip: If you ever change `--dim`, delete old `*.db`/`*.index` before re-running (to avoid FAISS dimension mismatch).
+
+---
+
+## 🚀 One-Click Reproducibility (GitHub Actions)
+
+This repo includes a GitHub Actions workflow at `.github/workflows/ci.yml`.
+On every push/PR it:
+
+1. Installs dependencies
+2. Runs the two benchmark commands above
+3. Generates plots
+4. Uploads all results as artifacts
+
+Badge:
+![Benchmarks](https://github.com/fawziabuhussin/LLM-Caching-Project/actions/workflows/ci.yml/badge.svg)
 
 ---
 
@@ -100,10 +128,11 @@ python plot_results.py
 
 * **FAISS install (Windows):** We install `faiss-cpu` via pip in the quickstart. If it ever fails, upgrade pip and retry:
 
-  ```
+  ```bash
   pip install -U pip
   pip install faiss-cpu
   ```
+
 * **Changed `--dim`?** Delete old `*.db` and `*.index` files before rerunning.
 
 ---
@@ -112,3 +141,5 @@ python plot_results.py
 
 * [GPTCache — ZillizTech](https://github.com/zilliztech/GPTCache)
 * O’Neil et al., *TinyLFU: A Highly Efficient Cache Admission Policy*, ICS 2017.
+
+```
