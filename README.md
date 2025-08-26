@@ -16,7 +16,8 @@ By default, GPTCache uses **Least Recently Used (LRU)** eviction, treating a 5-t
 
 ## ⚡ Quickstart (pip + reproducible benchmarks)
 
-> Works on Windows/macOS/Linux. Uses traces in `data/`.
+> Works on Windows/macOS/Linux. Uses traces in `data/`.  
+> If `data/freq_wins_50k.jsonl` is missing, CI auto-generates a small deterministic trace so the workflow is self-contained.
 
 ### 0) Install
 ```bash
@@ -31,9 +32,9 @@ pip install -r requirements.txt
 Run baseline and TinyLFU at 200MB (\~102,400 items):
 
 ```bash
-py bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode baseline
+python3 bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode baseline
 
-py bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
+python3 bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
 ```
 
 ### 2) Generate plots
@@ -53,7 +54,7 @@ python3 plot_results.py
 rm -rf results/ *.db *.index
 ```
 
-> Tip: If you ever change `--dim`, delete old `*.db`/`*.index` before re-running (to avoid FAISS dimension mismatch).
+> Tip: If you change `--dim`, delete old `*.db`/`*.index` before re-running (FAISS dimension mismatch).
 
 ---
 
@@ -63,9 +64,10 @@ This repo includes a GitHub Actions workflow at `.github/workflows/ci.yml`.
 On every push/PR it:
 
 1. Installs dependencies
-2. Runs the two benchmark commands above
-3. Generates plots
-4. Uploads all results as artifacts
+2. Ensures `data/freq_wins_50k.jsonl` exists (auto-generates a small trace if missing)
+3. Runs the two benchmark commands above
+4. Generates plots
+5. Uploads all `results/` as artifacts
 
 Badge:
 ![Benchmarks](https://github.com/fawziabuhussin/LLM-Caching-Project/actions/workflows/ci.yml/badge.svg)
