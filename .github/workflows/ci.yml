@@ -17,7 +17,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-          cache: "pip"
+          cache: pip
 
       - name: Install dependencies
         run: |
@@ -30,11 +30,10 @@ jobs:
       - name: Generate trace if missing (deterministic)
         run: |
           python - <<'PY'
-import json, random, os, sys
+import json, random, os
 p = "data/freq_wins_50k.jsonl"
 if not os.path.exists(p):
     random.seed(42)
-    # small CI-friendly size; keeps structure the same as your bigger file
     hot = [f"hot-{i}" for i in range(50)]
     cold = [f"cold-{i}" for i in range(2000)]
     with open(p, "w", encoding="utf-8") as f:
@@ -46,7 +45,6 @@ PY
 
       - name: Sanity check files
         run: |
-          ls -lah
           ls -lah data || true
           python - <<'PY'
 import os, itertools
