@@ -24,9 +24,8 @@ By default, GPTCache uses **Least Recently Used (LRU)** eviction, treating a 5-t
 pip install -U pip gptcache faiss-cpu sqlalchemy numpy pandas matplotlib tqdm
 
 # Run baseline → TinyLFU → plots on the provided trace
-python bench_gptcache.py --trace data\freq_wins_50k.jsonl --dim 512 --capacity 25600 --base-lat 0.0005 --per-token 0.0002 --mode baseline
-python bench_gptcache.py --trace data\freq_wins_50k.jsonl --dim 512 --capacity 25600 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
-python plot_results.py
+python3 bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode baseline
+python3 bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
 ```
 
 Optional: run the second trace as well:
