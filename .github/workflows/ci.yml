@@ -29,32 +29,22 @@ jobs:
 
       - name: Generate trace if missing (deterministic)
         run: |
-          python - <<'PY'
-import json, random, os
-p = "data/freq_wins_50k.jsonl"
-if not os.path.exists(p):
-    random.seed(42)
-    hot = [f"hot-{i}" for i in range(50)]
-    cold = [f"cold-{i}" for i in range(2000)]
-    with open(p, "w", encoding="utf-8") as f:
-        for _ in range(5000):
-            key = random.choice(hot) if random.random() < 0.6 else random.choice(cold)
-            f.write(json.dumps({"prompt": key, "response": f"response-for-{key}"}) + "\n")
-print("trace_ready:", p)
-PY
+          python -c "import json, random, os; p='data/freq_wins_50k.jsonl'; \
+if not os.path.exists(p): \
+  random.seed(42); hot=[f'hot-{i}' for i in range(50)]; cold=[f'cold-{i}' for i in range(2000)]; \
+  f=open(p,'w',encoding='utf-8'); \
+  [f.write(json.dumps({'prompt': (random.choice(hot) if random.random()<0.6 else random.choice(cold)), 'response': 'response-for-'+(random.choice(hot) if random.random()<0.6 else random.choice(cold))})+'\\n') for _ in range(5000)]; \
+  f.close(); \
+print('trace_ready:', p)"
 
       - name: Sanity check files
         run: |
+          ls -lah
           ls -lah data || true
-          python - <<'PY'
-import os, itertools
-p = "data/freq_wins_50k.jsonl"
-print("exists:", os.path.exists(p), "size:", os.path.getsize(p) if os.path.exists(p) else 0)
-if os.path.exists(p):
-    with open(p, "r", encoding="utf-8") as f:
-        for i, line in zip(range(2), f):
-            print(f"line{i+1}:", line.strip()[:200])
-PY
+          python -c "import os, itertools; p='data/freq_wins_50k.jsonl'; \
+print('exists:', os.path.exists(p), 'size:', os.path.getsize(p) if os.path.exists(p) else 0); \
+print('first two lines:'); \
+[print('> ', line.strip()) for line in (open(p,'r',encoding='utf-8').read().splitlines()[:2] if os.path.exists(p) else [])]"
 
       - name: Run baseline
         run: |
