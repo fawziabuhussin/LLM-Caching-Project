@@ -73,24 +73,16 @@ def main():
     ap.add_argument("--outdir", default="results")
     args = ap.parse_args()
 
-    # ----- init GPTCache: SQLite + FAISS; capacity-limited; explicit LRU eviction -----
-    data_dir = Path(".gptcache_run")  # isolate per-run cache files in CI
+    # ----- init GPTCache: SQLite + FAISS; capacity-limited; clean data dir to avoid init-eviction -----
+    data_dir = Path(".gptcache_run")
+    shutil.rmtree(data_dir, ignore_errors=True)  # fresh start for CI; prevents buggy eviction on init
     data_dir.mkdir(exist_ok=True)
-
-    # If you frequently change --dim or --capacity in CI, start clean to avoid old IDs causing immediate eviction
-    # Comment the next two lines if you want persistence across runs.
-    shutil.rmtree(data_dir, ignore_errors=True)
-    data_dir.mkdir(exist_ok=True)
-
-    clean_size = max(1, int(args.capacity * 0.2))  # portion to clean on eviction
 
     dm = manager_factory(
-        manager="sqlite,faiss",
+        "sqlite,faiss",
         data_dir=str(data_dir),
         vector_params={"dimension": args.dim, "top_k": 1},
         max_size=args.capacity,
-        clean_size=clean_size,
-        eviction="LRU",  # <-- critical: ensure a valid eviction policy
     )
 
     cache.init(
