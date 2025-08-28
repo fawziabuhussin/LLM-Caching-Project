@@ -28,7 +28,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          # plotting deps (if not already in requirements.txt)
           pip install pandas matplotlib
 
       - name: Ensure data/results dirs
@@ -44,8 +43,7 @@ jobs:
               hot  = [f"hot-{i}"  for i in range(50)]
               cold = [f"cold-{i}" for i in range(2000)]
               with open(p, "w", encoding="utf-8") as f:
-                  # ~5k lines to keep CI fast but still show policy effects
-                  for _ in range(5000):
+                  for _ in range(5000):  # small CI trace so runs are quick
                       key = random.choice(hot) if random.random() < 0.6 else random.choice(cold)
                       f.write(json.dumps({"prompt": key, "response": f"response-for-{key}"}) + "\n")
           print("trace_ready:", p)
@@ -75,20 +73,57 @@ jobs:
             ${EXTRA} \
             --outdir results
 
-      # Run plotting once, after all matrix legs finish
-      - name: Plot results
-        if: ${{ endsWith(matrix.mode, 'tinylfu_admit') && matrix.capacity == 102400 }}
-        run: |
-          if [ -f plot_results.py ]; then
-            python3 plot_results.py
-          else
-            echo "plot_results.py not found; skipping plot step."
-          fi
-
-      - name: Upload results
+      - name: Upload results for this leg
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results-${{ matrix.mode }}-${{ matrix.capacity }}
           path: |
             results/**
             !**/__pycache__/**
+
+  aggregate-plots:
+    runs-on: ubuntu-latest
+    needs: run-benchmarks
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install plotting deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pip install pandas matplotlib
+
+      - name: Download all benchmark artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-results-*
+          path: results
+          merge-multiple: true
+
+      - name: Show what we downloaded
+        run: |
+          ls -R results || true
+          find results -name "summary.txt" -maxdepth 3 -print
+
+      - name: Plot results (all legs combined)
+        run: |
+          if [ -f plot_results.py ]; then
+            python3 plot_results.py
+          else
+            echo "plot_results.py not found; cannot generate plots." && exit 1
+          fi
+
+      - name: Upload combined plots & CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-plots
+          path: |
+            results/plots/**
+            results/benchmark_summary.csv
