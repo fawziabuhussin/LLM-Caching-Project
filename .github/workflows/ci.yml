@@ -8,6 +8,19 @@ on:
 jobs:
   run-benchmarks:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [baseline, tinylfu_admit]           # policies for the main figures
+        capacity: [25600, 51200, 102400]          # 50MB, 100MB, 200MB (≈ items)
+        include:
+          # Optional ablation: uncomment to also run k=3 and get the ablation row
+          # - mode: tinylfu_k3
+          #   capacity: 25600
+          # - mode: tinylfu_k3
+          #   capacity: 51200
+          # - mode: tinylfu_k3
+          #   capacity: 102400
 
     steps:
       - name: Checkout repo
@@ -23,11 +36,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          # plotting deps (if not already in requirements.txt)
+          pip install pandas matplotlib
 
       - name: Ensure data/results dirs
         run: mkdir -p data results
 
-      - name: Generate trace if missing (deterministic)
+      - name: Generate trace if missing (deterministic, CI-friendly)
         run: |
           cat > gen_trace.py <<'PY'
           import json, random, os
@@ -37,7 +52,8 @@ jobs:
               hot  = [f"hot-{i}"  for i in range(50)]
               cold = [f"cold-{i}" for i in range(2000)]
               with open(p, "w", encoding="utf-8") as f:
-                  for _ in range(5000):  # small CI-friendly trace
+                  # ~5k lines to keep CI fast but still show policy effects
+                  for _ in range(5000):
                       key = random.choice(hot) if random.random() < 0.6 else random.choice(cold)
                       f.write(json.dumps({"prompt": key, "response": f"response-for-{key}"}) + "\n")
           print("trace_ready:", p)
@@ -48,40 +64,40 @@ jobs:
         run: |
           ls -lah
           ls -lah data || true
-          cat > sanity.py <<'PY'
-          import os
-          p = "data/freq_wins_50k.jsonl"
-          print("exists:", os.path.exists(p), "size:", os.path.getsize(p) if os.path.exists(p) else 0)
-          if os.path.exists(p):
-              with open(p, "r", encoding="utf-8") as f:
-                  for i in range(2):
-                      line = f.readline().rstrip()
-                      if not line: break
-                      print("> ", line)
-          PY
-          python sanity.py
+          head -n 3 data/freq_wins_50k.jsonl || true
 
-      - name: Run baseline
+      - name: Run ${{ matrix.mode }} at capacity=${{ matrix.capacity }}
+        shell: bash
         run: |
+          EXTRA=""
+          if [ "${{ matrix.mode }}" = "tinylfu_admit" ]; then
+            EXTRA="--admit-k 2"
+          elif [ "${{ matrix.mode }}" = "tinylfu_k3" ]; then
+            EXTRA=""  # script enforces k=3 internally for this mode, or pass --admit-k 3 if needed
+          fi
           python3 bench_gptcache.py \
             --trace data/freq_wins_50k.jsonl \
-            --dim 512 --capacity 102400 \
-            --base-lat 0.0005 --per-token 0.0002 \
-            --mode baseline
+            --dim 512 \
+            --capacity ${{ matrix.capacity }} \
+            --base-lat 0.0005 \
+            --per-token 0.0002 \
+            --mode ${{ matrix.mode }} \
+            $EXTRA \
+            --outdir results
 
-      - name: Run TinyLFU
+      - name: Plot results (guarded)
+        if: ${{ matrix.mode == 'tinylfu_admit' && matrix.capacity == 102400 }}
         run: |
-          python3 bench_gptcache.py \
-            --trace data/freq_wins_50k.jsonl \
-            --dim 512 --capacity 102400 \
-            --base-lat 0.0005 --per-token 0.0002 \
-            --mode tinylfu_admit
-
-      - name: Generate plots
-        run: python3 plot_results.py
+          if [ -f plot_results.py ]; then
+            python3 plot_results.py
+          else
+            echo "plot_results.py not found; skipping plot step."
+          fi
 
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results
-          path: results/**
+          name: benchmark-results-${{ matrix.mode }}-${{ matrix.capacity }}
+          path: |
+            results/**
+            !**/__pycache__/**
