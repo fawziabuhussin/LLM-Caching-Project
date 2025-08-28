@@ -1,5 +1,5 @@
 # bench_gptcache.py
-import argparse, json, math, statistics, time
+import argparse, json, math, statistics, time, shutil
 from collections import Counter
 from pathlib import Path
 from collections import Counter, OrderedDict
@@ -73,20 +73,25 @@ def main():
     ap.add_argument("--outdir", default="results")
     args = ap.parse_args()
 
-    # ----- init GPTCache: SQLite + FAISS; capacity-limited; LRU by default -----
-    # IMPORTANT: if you previously ran with a DIFFERENT dimension, delete old *.index/*.db files before rerunning.
-    try:
-        dm = manager_factory(
-            "sqlite,faiss",
-            vector_params={"dimension": args.dim, "top_k": 1},
-            max_size=args.capacity,
-        )
-    except TypeError:
-        dm = manager_factory(
-            "sqlite,faiss",
-            vector_params={"dimension": args.dim, "top_k": 1},
-            max_size=args.capacity,
-        )
+    # ----- init GPTCache: SQLite + FAISS; capacity-limited; explicit LRU eviction -----
+    data_dir = Path(".gptcache_run")  # isolate per-run cache files in CI
+    data_dir.mkdir(exist_ok=True)
+
+    # If you frequently change --dim or --capacity in CI, start clean to avoid old IDs causing immediate eviction
+    # Comment the next two lines if you want persistence across runs.
+    shutil.rmtree(data_dir, ignore_errors=True)
+    data_dir.mkdir(exist_ok=True)
+
+    clean_size = max(1, int(args.capacity * 0.2))  # portion to clean on eviction
+
+    dm = manager_factory(
+        manager="sqlite,faiss",
+        data_dir=str(data_dir),
+        vector_params={"dimension": args.dim, "top_k": 1},
+        max_size=args.capacity,
+        clean_size=clean_size,
+        eviction="LRU",  # <-- critical: ensure a valid eviction policy
+    )
 
     cache.init(
         embedding_func=lambda q: hashed_embedding(q, args.dim),  # returns list -> FAISS sees (1, dim)
