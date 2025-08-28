@@ -21,9 +21,9 @@ By default, GPTCache uses **Least Recently Used (LRU)** eviction, treating a 5-t
 
 ### 0) Install
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate         # Windows: .venv\Scripts\activate
-python -m pip install --upgrade pip
+py -m venv .venv
+.venv\Scripts\activate
+py -m pip install --upgrade pip
 pip install -r requirements.txt
 ````
 
@@ -32,15 +32,15 @@ pip install -r requirements.txt
 Run baseline and TinyLFU at 200MB (\~102,400 items):
 
 ```bash
-python3 bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode baseline
+py bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode baseline
 
-python3 bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
+py bench_gptcache.py --trace data/freq_wins_50k.jsonl --dim 512 --capacity 102400 --base-lat 0.0005 --per-token 0.0002 --mode tinylfu_admit
 ```
 
 ### 2) Generate plots
 
 ```bash
-python3 plot_results.py
+py plot_results.py
 ```
 
 **Outputs:**
