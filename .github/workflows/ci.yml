@@ -11,16 +11,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [baseline, tinylfu_admit]           # policies for the main figures
-        capacity: [25600, 51200, 102400]          # 50MB, 100MB, 200MB (≈ items)
-        include:
-          # Optional ablation: uncomment to also run k=3 and get the ablation row
-          # - mode: tinylfu_k3
-          #   capacity: 25600
-          # - mode: tinylfu_k3
-          #   capacity: 51200
-          # - mode: tinylfu_k3
-          #   capacity: 102400
+        mode: [baseline, tinylfu_admit]         # policies for the main figures
+        capacity: [25600, 51200, 102400]        # 50MB, 100MB, 200MB (≈ items)
 
     steps:
       - name: Checkout repo
@@ -72,8 +64,6 @@ jobs:
           EXTRA=""
           if [ "${{ matrix.mode }}" = "tinylfu_admit" ]; then
             EXTRA="--admit-k 2"
-          elif [ "${{ matrix.mode }}" = "tinylfu_k3" ]; then
-            EXTRA=""  # script enforces k=3 internally for this mode, or pass --admit-k 3 if needed
           fi
           python3 bench_gptcache.py \
             --trace data/freq_wins_50k.jsonl \
@@ -82,11 +72,12 @@ jobs:
             --base-lat 0.0005 \
             --per-token 0.0002 \
             --mode ${{ matrix.mode }} \
-            $EXTRA \
+            ${EXTRA} \
             --outdir results
 
-      - name: Plot results (guarded)
-        if: ${{ matrix.mode == 'tinylfu_admit' && matrix.capacity == 102400 }}
+      # Run plotting once, after all matrix legs finish
+      - name: Plot results
+        if: ${{ endsWith(matrix.mode, 'tinylfu_admit') && matrix.capacity == 102400 }}
         run: |
           if [ -f plot_results.py ]; then
             python3 plot_results.py
